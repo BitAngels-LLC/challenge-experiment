@@ -255,7 +255,9 @@ contract NitrogemContract is ReentrancyGuard, Ownable {
 
     using SafeMath for uint256;
 
-    mapping(address => uint256) internal amountNitrogem;
+    mapping(address => uint256) internal addressToNitrogem;
+    mapping(uint256 => uint256) public bnbToNitrogem;
+
 
     //uint256 public emeraldRate = 0;
     uint256 public rubyTier = process.env.RUBY; // 1BNB = process.env.RUBY Nitrogen Amount in Ruby Tier
@@ -265,60 +267,44 @@ contract NitrogemContract is ReentrancyGuard, Ownable {
     event buyRubyTierEvent(address, uint256);
     event buyDiamondTierEvent(address, uint256);
 
-    function buyNitrogem(uint256 amount) public payable nonReentrant{
-        if(msg.value == 10**15) { //0.0001 BNB
-            amountNitrogem[msg.sender] += 5;
-        }
-        else if(msg.value == 5*10**15) { //0.005 BNB
-            amountNitrogem[msg.sender] += 25;
-        }
-        else if(msg.value == 10**16) { //0.01 BNB
-            amountNitrogem[msg.sender] += 55;
-        }        
-        else if(msg.value == 5*10**16) { //0.05 BNB
-            amountNitrogem[msg.sender] += 275;      
-        }
-        else if(msg.value == 10**17) { //0.1 BNB
-            amountNitrogem[msg.sender] += 550;        
-        }
-        else if(msg.value == 5*10**17) { //0.5BNB
-            amountNitrogem[msg.sender] += 2750;         
-        }
-        else if(msg.value == 10**18) { //1BNB
-            amountNitrogem[msg.sender] += 5500;          
-        }
-        else if(msg.value == 3*10**18) { //3BNB
-            amountNitrogem[msg.sender] += 18000;          
-        }
-        else if(msg.value == 5*10**18) { //5BNB
-            amountNitrogem[msg.sender] += 30000;          
-        }
-        else{
-            return;
-        }
-        
-        emit buyNitrogemEvent(msg.sender, amount);
+    constructor() {
+        bnbToNitrogem[0.0001 ether] = 5;
+        bnbToNitrogem[0.005 ether] = 25;
+        bnbToNitrogem[0.01 ether] = 55;
+        bnbToNitrogem[0.05 ether] = 275;
+        bnbToNitrogem[0.1 ether] = 550;
+        bnbToNitrogem[0.5 ether] = 2750;
+        bnbToNitrogem[1 ether] = 5500;
+        bnbToNitrogem[3 ether] = 18000;
+        bnbToNitrogem[5 ether] = 30000;
+    }
+
+    function buyNitrogem(uint256 amount) public payable nonReentrant {
+        uint256 reward = bnbToNitrogem[msg.value];
+        require(reward > 0, "Invalid BNB amount");
+        addressToNitrogem[msg.sender] += reward;
+        emit buyNitrogemEvent(msg.sender, reward);
     }
     
     function buyRubyTier() public payable nonReentrant{
         require(msg.value == 5*10**17 ); // 0.5 BNB
-        //amountNitrogem[msg.sender] += rubyTier;
+        //addressToNitrogem[msg.sender] += rubyTier;
         emit buyRubyTierEvent(msg.sender, rubyTier);
     }
 
     function buyDiamondTier() public payable nonReentrant{
         require(msg.value == 1*10**18 ); // 1 BNB
-        //amountNitrogem[msg.sender] += diamondTier;
+        //addressToNitrogem[msg.sender] += diamondTier;
         emit buyDiamondTierEvent(msg.sender, diamondTier);
     }
 
     function voteWithNitrogem(uint256 amount) public{
-        require(amountNitrogem[msg.sender] >= amount);
-        amountNitrogem[msg.sender] -= amount;
+        require(addressToNitrogem[msg.sender] >= amount);
+        addressToNitrogem[msg.sender] -= amount;
     }
     
     function getNitrogemAmount(address addr) public view returns(uint256) {
-        return amountNitrogem[addr];
+        return addressToNitrogem[addr];
     }
 
     function withdrawBNB() public nonReentrant onlyOwner {      
